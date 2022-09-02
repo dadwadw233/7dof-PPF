@@ -119,7 +119,7 @@ void CentralVoting::Solve() {
   Eigen::Vector4f center;
   pcl::compute3DCentroid(*scene, center);
   //this->scene_subsampled = subsampleAndCalculateNormals(scene, center[0]+200, center[1], center[2], false);
-  this->scene_subsampled = subsampleAndCalculateNormals(scene, Eigen::Vector4f(28.0f, 28.0f, 28.0f, 0.0f));
+  this->scene_subsampled = subsampleAndCalculateNormals(scene, triple_set[0][0].x*2,triple_set[0][0].y*2,triple_set[0][0].z*2,true);
   // pcl::copyPointCloud(*scene, *this->scene_subsampled);
   std::cout<<center<<std::endl;
   std::vector<pcl::PointCloud<pcl::PointNormal>::Ptr> cloud_models_with_normal;
@@ -438,7 +438,7 @@ CentralVoting::subsampleAndCalculateNormals(
   //normal_estimation_filter.setRadiusSearch(normalEstimationRadius);
   normal_estimation_filter.compute(*cloud_subsampled_normals);
   if (reverse) {
-    for (auto i : *cloud_subsampled_normals) {
+    for (auto &i : *cloud_subsampled_normals) {
       i.normal_x = -i.normal_x;
       i.normal_y = -i.normal_y;
       i.normal_z = -i.normal_z;
@@ -485,7 +485,7 @@ CentralVoting::subsampleAndCalculateNormals(
   //normal_estimation_filter.setRadiusSearch(normalEstimationRadius);
   normal_estimation_filter.compute(*cloud_subsampled_normals);
   if (reverse) {
-    for (auto i : *cloud_subsampled_normals) {
+    for (auto &i : *cloud_subsampled_normals) {
       i.normal_x = -i.normal_x;
       i.normal_y = -i.normal_y;
       i.normal_z = -i.normal_z;

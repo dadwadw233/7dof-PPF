@@ -216,6 +216,8 @@ void PPFRegistration::compute() {
   Eigen::Vector3f n1{};
   Eigen::Vector3f n2{};
   Eigen::Vector3f delta{};
+  pcl::PointCloud<pcl::PointNormal>::Ptr center_normal(
+      new pcl::PointCloud<pcl::PointNormal>());
   int r_num = 0;
   auto tp1 = boost::chrono::steady_clock::now();
   pcl::PointCloud<pcl::PointXYZ>::Ptr triple_scene(
@@ -227,10 +229,10 @@ void PPFRegistration::compute() {
   for (auto i = 0; i < scene_cloud_with_normal->points.size(); ++i) {
 #pragma omp parallel for shared(                                              \
     x_num, y_num, z_num, zr, xr, yr, i, triple_scene,                         \
-    scene_reference_point_sampling_rate, r_num, scale, scale_cnt) private(p1, p2, n1, n2, delta,       \
+    scene_reference_point_sampling_rate, r_num, scale, scale_cnt, cout, center_normal) private(p1, p2, n1, n2, delta,       \
                                                  feature, data) default(none) \
     num_threads(15)
-    for (auto j = 0; j < scene_cloud_with_normal->points.size() / 10; ++j) {
+    for (auto j = 0; j < scene_cloud_with_normal->points.size()/100; ++j) {
       if (i == j) {
         continue;
       } else {
@@ -250,9 +252,9 @@ void PPFRegistration::compute() {
 
         delta = p2 - p1;
         float f4 = delta.norm();
-        if (f4 > d_obj) {
+        /*if (f4 > d_obj) {
           continue;
-        }
+        }*/
         /*
         if(f4<250)
         {
@@ -338,8 +340,8 @@ void PPFRegistration::compute() {
           Eigen::Vector3f m_1{model_lrf.r.x, model_lrf.r.y, model_lrf.r.z};
           Eigen::Vector3f m_2{model_lrf.t.x, model_lrf.t.y, model_lrf.t.z};
 
-          m_1 = R_1 * m_1;
-          m_2 = R_1 * m_2;
+          //m_1 = R_1 * m_1;
+          //m_2 = R_1 * m_2;
 
           t_1 << data.second.r.x - m_1[0], data.second.r.y - m_1[1],
               data.second.r.z - m_1[2], 1.0f;
@@ -350,25 +352,25 @@ void PPFRegistration::compute() {
           Eigen::Matrix4f T_1{};
           Eigen::Matrix4f T_2{};
 
-          T_1 << R_1(0, 0), R_1(0, 1), R_1(0, 2), t_1[0], R_1(1, 0), R_1(1, 1),
-              R_1(1, 2), t_1[1], R_1(2, 0), R_1(2, 1), R_1(2, 2), t_1[2], 0.0f,
-              0.0f, 0.0f, t_1[3];
+          T_1 << R_1(0, 0), R_1(0, 1), R_1(0, 2), t_1[0],
+              R_1(1, 0), R_1(1, 1),R_1(1, 2), t_1[1],
+              R_1(2, 0), R_1(2, 1), R_1(2, 2), t_1[2],
+              0.0f,0.0f, 0.0f, t_1[3];
           T_2 << R_2(0, 0), R_2(0, 1), R_2(0, 2), t_2[0], R_2(1, 0), R_2(1, 1),
               R_2(1, 2), t_2[1], R_2(2, 0), R_2(2, 1), R_2(2, 2), t_2[2], 0.0f,
-              0.0f, 0.0f, t_1[3];
+              0.0f, 0.0f, t_2[3];
 
           pcl::PointXYZ p;
           Eigen::Affine3f transform_1(T_1);
           Eigen::Affine3f transform_2(T_2);
-          Eigen::Vector3f model_center{};
-          Eigen::Vector3f hypo_center{};
-          Eigen::Vector3f hypo_center_{};
-          model_center<<triple_set[0].x, triple_set[0].y, triple_set[0].z;
-          pcl::transformPoint(model_center, hypo_center, transform_1);
-          pcl::transformPoint(model_center, hypo_center_, transform_2);
-          if(::calculateDistance(hypo_center, hypo_center_)>50){
-            continue;
-          }
+          Eigen::Vector3f Nrc,Ntc;
+          Nrc<<triple_set[0].x-model_lrf.r.x, triple_set[0].y-model_lrf.r.y, triple_set[0].z-model_lrf.r.z;
+          Ntc<<triple_set[0].x-model_lrf.t.x, triple_set[0].y-model_lrf.t.y, triple_set[0].z-model_lrf.t.z;
+          //Eigen::Vector3f test (model_lrf.r.normal_x, model_lrf.r.normal_y, model_lrf.r.normal_z);
+          //Eigen::Vector3f test_ (data.second.r.normal_x, data.second.r.normal_y, data.second.r.normal_z);
+          //std::cout<<"scene r\n"<<data.second.r.normal<<std::endl;
+          //std::cout<<"model r\n"<<model_lrf.r.normal<<std::endl;
+          //std::cout<<pcl::getAngle3D(transform_1.rotation().reverse()*test,test_,true)<<std::endl;
           std::vector<int> index_1, index_2;
 #pragma omp critical
           scale+=data.second.dist/model_lrf.dist;
@@ -377,9 +379,16 @@ void PPFRegistration::compute() {
           for (int i = 0; i < 3; i++) {
             Eigen::Vector3f m{};
             Eigen::Vector3f s{};
+            Eigen::Vector3f x_{1,0,0};
             m << triple_set[i].x, triple_set[i].y, triple_set[i].z;
             s << 0.0f, 0.0f, 0.0f;
-            pcl::transformPoint(m, s, transform_1);
+
+            //std::cout<<m<<std::endl;
+            //std::cout<<"model r\n"<<data.second.r<<std::endl;
+            //std::cout<<"scene r\n"<<model_lrf.r<<std::endl;
+            //std::cout<<transform_1.translation()<<std::endl;
+            //pcl::transformPoint(m, s, transform_1);
+            s = m+transform_1.translation();
             /*if(isnan(s[0])|| isnan(s[1])||isnan(s[2])){
               break;
             }*/
@@ -406,12 +415,24 @@ void PPFRegistration::compute() {
                                   clustering_position_diff_threshold));
             if (i == 0) {
 #pragma omp critical
-              triple_scene->points.emplace_back(s[0], s[1], s[2]);
+              triple_scene->points.emplace_back(s[0], s[1], s[2]);//变换后的center
+              Eigen::Vector3f after{};
+              after<<(transform_1.rotation()*Ntc).normalized();
+              pcl::PointNormal p{};
+              p.x = s[0];
+              p.y = s[1];
+              p.z = s[2];
+              p.normal_x = after[0];
+              p.normal_y = after[1];
+              p.normal_z = after[2];
+#pragma omp critical
+              center_normal->points.push_back(p);
             }
 
             index_1.push_back((xCell - 1) + (yCell - 1) * x_num +
                               (zCell - 1) * x_num * y_num);
-            pcl::transformPoint(m, s, transform_2);
+            //pcl::transformPoint(m, s, transform_2);
+            s = m+transform_2.translation();
             /*if(isnan(s[0])|| isnan(s[1])||isnan(s[2])){
               break;
             }*/
@@ -439,6 +460,17 @@ void PPFRegistration::compute() {
             if (i == 0) {
 #pragma omp critical
               triple_scene->points.emplace_back(s[0], s[1], s[2]);
+              Eigen::Vector3f after{};
+              after<<(transform_2.rotation()*Ntc).normalized();
+              pcl::PointNormal p{};
+              p.x = s[0];
+              p.y = s[1];
+              p.z = s[2];
+              p.normal_x = after[0];
+              p.normal_y = after[1];
+              p.normal_z = after[2];
+#pragma omp critical
+              center_normal->points.push_back(p);
             }
 
             index_2.push_back((xCell - 1) + (yCell - 1) * x_num +
@@ -479,7 +511,7 @@ void PPFRegistration::compute() {
   std::vector<pcl::PointIndices> cluster_indices;
   pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
   ec.setClusterTolerance(this->clustering_position_diff_threshold);
-  ec.setMinClusterSize(2);
+  ec.setMinClusterSize(10);
   ec.setMaxClusterSize(25000);
   ec.setSearchMethod(tree);
   ec.setInputCloud(temp);
@@ -540,12 +572,17 @@ void PPFRegistration::compute() {
       scene_cloud_with_normal, 255, 255, 255);
   pcl::visualization::PointCloudColorHandlerCustom<pcl::PointNormal> green(
       model_cloud_with_normal, 0, 255, 0);
-  view.addPointCloud(triple, red, "triple");
+  pcl::visualization::PointCloudColorHandlerCustom<pcl::PointNormal> yellow(
+      center_normal, 0, 0, 255);
+  //view.addPointCloud(triple, red, "triple");
   view.addPointCloud(model_cloud_with_normal, green, "model");
-  view.setPointCloudRenderingProperties(
-      pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 5, "triple");
+  //view.addPointCloud(center_normal, yellow, "center_normal");
+  //view.setPointCloudRenderingProperties(
+      //pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 5, "triple");
   view.addPointCloud(scene_cloud_with_normal, white, "scene");
-
+  //view.addPointCloudNormals<pcl::PointNormal>(center_normal,50,100,"normals");
+  view.addPointCloudNormals<pcl::PointNormal>(model_cloud_with_normal,50,10,"model_normals");
+  view.addPointCloudNormals<pcl::PointNormal>(scene_cloud_with_normal,50,10,"scene_normals");
   while (!view.wasStopped()) {
     view.spinOnce(100);
     boost::this_thread::sleep(boost::posix_time::microseconds(1000));

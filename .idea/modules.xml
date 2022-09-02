@@ -2,6 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/7dof-PPF.iml" filepath="$PROJECT_DIR$/.idea/7dof-PPF.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/central_voting.iml" filepath="$PROJECT_DIR$/.idea/central_voting.iml" />
     </modules>
   </component>

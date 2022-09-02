@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(central_voting)
+project(7dof_PPF)
 set(CMAKE_CXX_STANDARD 17)
 
 find_package(PCL 1.8 REQUIRED)
@@ -21,7 +21,7 @@ link_directories($PCL_LIBRARY_DIRS)
 
 add_definitions(${PCL_DEFINITIONS})
 
-add_executable(central_voting
+add_executable(7dof_PPF
         main.cpp
         PPFEstimation.cpp
         PPFEstimation.h
@@ -34,7 +34,7 @@ add_executable(central_voting
         PPFRegistration.cpp PPFRegistration.h
         add_gauss_noise.cpp add_gauss_noise.h)
 
-target_link_libraries(central_voting ${PCL_LIBRARIES} tbb)
+target_link_libraries(7dof_PPF ${PCL_LIBRARIES} tbb)
 
 
 
